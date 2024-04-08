@@ -1,0 +1,15 @@
+version: '3.1'
+
+services:
+  redis:
+    image: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./redis.conf:/usr/local/etc/redis/redis.conf
+      - ./users.acl:/etc/redis/users.acl
+      - redis_data:/data
+    command: redis-server /usr/local/etc/redis/redis.conf
+
+volumes:
+  redis_data:
