@@ -1,6 +1,6 @@
 defmodule KeyValueEx.RedisClient do
 
-  @crlf "\r\n"
+  @clrf "\r\n"
   def connect(host \\ 'localhost', port \\ 6379, username \\ nil, password \\ nil) do
     case :gen_tcp.connect(to_charlist(host), port, [:binary, packet: :line, active: false]) do
       {:ok, socket} ->
@@ -12,44 +12,51 @@ defmodule KeyValueEx.RedisClient do
     end
   end
 
+  # Helper function to build commands using the @clrf constant.
+  defp build_command(parts) when is_list(parts) do
+    # Calculate the total number of parts
+    total_parts = Enum.count(parts)
+
+    # Prepend the total count and reassemble the parts
+    full_command =
+      ["*#{total_parts}"] ++ Enum.flat_map(parts, fn part ->
+        ["$#{byte_size(part)}", part]
+      end)
+
+    # Join all parts using CRLF and append a final CRLF
+    Enum.join(full_command, @clrf) <> @clrf
+  end
+
   defp authenticate(_socket, nil, nil), do: :ok
   defp authenticate(socket, username, password) do
-    command =
-      if username do
-        ["*3\r\n", "$4\r\nAUTH\r\n", "$#{byte_size(username)}\r\n#{username}\r\n", "$#{byte_size(password)}\r\n#{password}\r\n"]
-      else
-        ["*2\r\n", "$4\r\nAUTH\r\n", "$#{byte_size(password)}\r\n#{password}\r\n"]
-      end
-    |> Enum.join()
+    parts = if username do
+      ["AUTH", username, password] # Assuming `username` and `password` are always strings.
+    else
+      ["AUTH", password]
+    end
+
+    command = build_command(parts)
 
     :ok = :gen_tcp.send(socket, command)
     receive_response(socket)
   end
 
   def set(socket, key, value) do
-    command =
-      ["*3\r\n", "$3\r\nSET\r\n", "$#{byte_size(key)}\r\n#{key}\r\n", "$#{byte_size(value)}\r\n#{value}\r\n"]
-    |> Enum.join()
-
+    command = build_command(["SET", key, value])
     :ok = :gen_tcp.send(socket, command)
     receive_response(socket)
   end
 
   def get(socket, key) do
-    command =
-      ["*2\r\n", "$3\r\nGET\r\n", "$#{byte_size(key)}\r\n#{key}\r\n"]
-    |> Enum.join()
-
+    command = build_command(["GET", key])
     :ok = :gen_tcp.send(socket, command)
     receive_response(socket)
   end
 
   def ping(socket) do
-     command = "*1\r\n$4\r\nPING\r\n"
+     command = build_command(["PING"])
      :ok = :gen_tcp.send(socket, command)
-
      receive_response(socket)
-
   end
 
   defp receive_response(socket, acc \\ "") do
@@ -69,34 +76,37 @@ defmodule KeyValueEx.RedisClient do
     end
   end
 
+  # TODO: Need to refactor this
   defp full_response_received?(response) do
-  # Check if response starts with the bulk string indicator
-    if String.starts_with?(response, "$") do
-      parts = String.split(response, "\r\n", parts: 3)
-      # Ensure parts list is long enough and length string is not empty
-      if length(parts) > 1 and parts |> Enum.at(1) != "" do
-        [_, length_string | _rest] = parts
-        # Safely attempt to convert the length string to an integer
-        try do
-          IO.inspect("here")
-          IO.inspect(length_string)
-          length = String.to_integer(length_string)
+    IO.inspect(response, label: "Raw response")
 
-          # Calculate the expected length of the complete response
-          expected_length = byte_size(length_string) + length + 5 # Adjust for CRLFs and length prefix
-          # IO.inspect("size response: #{inspect(byte_size(response))}")
-          # IO.inspect("expected_length: #{inspect(expected_length)}")
-          # IO.inspect("length_string: #{inspect(length_string)}")
-          # IO.inspect("byte_size: #{inspect(byte_size(length_string))}")
-          byte_size(response) >= expected_length
-        rescue
-          ArgumentError -> false # If conversion fails, assume the response is incomplete
-        end
-      else
-        false # If the length string is empty, the response is incomplete
+    if String.starts_with?(response, "$") do
+      case String.split(response, "\r\n", parts: 3) do
+        ["$" <> length_string, _payload_part | _] when length_string != "" ->
+          try do
+            length = String.to_integer(length_string)
+            expected_length = byte_size(length_string) + length + 5 # $, length, \r\n, payload, \r\n
+            current_length = byte_size(response)
+
+            if current_length >= expected_length do
+              IO.puts("Full response received")
+              true
+            else
+              IO.puts("Waiting for more data")
+              false
+            end
+          rescue
+            ArgumentError ->
+              IO.puts("Failed to convert length string to integer")
+              false
+          end
+        _ ->
+          IO.puts("Length string is empty or parts are insufficient")
+          false
       end
     else
-      true # Non-bulk string responses are assumed to be complete
+      IO.puts("Response does not start with bulk string indicator")
+      true # This assumes non-bulk responses are complete, may need adjustment based on your protocol handling needs
     end
   end
 
@@ -107,6 +117,7 @@ defmodule KeyValueEx.RedisClient do
     handle_response_parts(parts)
   end
 
+  #TODO: Refactor this
   defp handle_response_parts(["+OK"]), do: :ok
   defp handle_response_parts(["$-1"]), do: nil
   defp handle_response_parts(["$0", ""]), do: ""
