@@ -12,7 +12,8 @@ defmodule KeyValueEx.Application do
       # KeyValueEx.Repo,
       {DNSCluster, query: Application.get_env(:key_value_ex, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: KeyValueEx.PubSub},
-      {KeyValueEx.RedisClient.Main, Application.get_env(:key_value_ex, KeyValueEx.RedisClient.Main, %{})},
+      {KeyValueEx.RedisClient.Main,
+       Application.get_env(:key_value_ex, KeyValueEx.RedisClient.Main, %{})},
       # Start a worker by calling: KeyValueEx.Worker.start_link(arg)
       # {KeyValueEx.Worker, arg},
       # Start to serve requests, typically the last entry

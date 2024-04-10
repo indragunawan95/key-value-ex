@@ -31,10 +31,10 @@ config :logger, :console,
 config :phoenix, :json_library, Jason
 
 config :key_value_ex, KeyValueEx.RedisClient.Main,
-    host: "localhost",
-    port: 6379,
-    username: "myuser",
-    password: "mypassword"
+  host: System.get_env("REDIS_HOST"),
+  port: System.get_env("REDIS_PORT", "0") |> String.to_integer(),
+  username: System.get_env("REDIS_USERNAME"),
+  password: System.get_env("REDIS_PASSWORD")
 
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
