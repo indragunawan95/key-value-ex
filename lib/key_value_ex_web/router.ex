@@ -5,7 +5,6 @@ defmodule KeyValueExWeb.Router do
     plug :accepts, ["json"]
   end
 
-  scope "/api", KeyValueExWeb do
-    pipe_through :api
-  end
+  forward "/graphql", Absinthe.Plug, schema: KeyValueExWeb.Schema
+  forward "/graphiql", Absinthe.Plug.GraphiQL, schema: KeyValueExWeb.Schema, interface: :simple
 end

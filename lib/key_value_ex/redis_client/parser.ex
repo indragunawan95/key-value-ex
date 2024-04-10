@@ -8,9 +8,10 @@ defmodule KeyValueEx.RedisClient.Parser do
 
     # Prepend the total count and reassemble the parts
     full_command =
-      ["*#{total_parts}"] ++ Enum.flat_map(parts, fn part ->
-        ["$#{byte_size(part)}", part]
-      end)
+      ["*#{total_parts}"] ++
+        Enum.flat_map(parts, fn part ->
+          ["$#{byte_size(part)}", part]
+        end)
 
     # Join all parts using CRLF and append a final CRLF
     Enum.join(full_command, @clrf) <> @clrf
@@ -24,10 +25,12 @@ defmodule KeyValueEx.RedisClient.Parser do
   defp handle_response_parts(["+OK"]), do: "OK"
   defp handle_response_parts(["$0", ""]), do: ""
   defp handle_response_parts(["+PONG"]), do: "PONG"
+
   defp handle_response_parts(["$" <> length_string, value | _rest]) do
     length = String.to_integer(length_string)
     if byte_size(value) == length, do: value, else: handle_incomplete_bulk_string(length, value)
   end
+
   defp handle_response_parts(_), do: "Unknown response format"
 
   # Handle cases where the full bulk string value might not have been received
