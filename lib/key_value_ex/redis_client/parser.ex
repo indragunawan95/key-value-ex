@@ -23,7 +23,8 @@ defmodule KeyValueEx.RedisClient.Parser do
   end
 
   defp handle_response_parts(["+OK"]), do: "OK"
-  defp handle_response_parts(["$0", ""]), do: ""
+  defp handle_response_parts(["$-1"]), do: nil
+  defp handle_response_parts(["$0"]), do: ""
   defp handle_response_parts(["+PONG"]), do: "PONG"
 
   defp handle_response_parts(["$" <> length_string, value | _rest]) do
