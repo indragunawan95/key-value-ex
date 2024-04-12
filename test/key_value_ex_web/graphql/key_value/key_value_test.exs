@@ -42,8 +42,12 @@ defmodule KeyValueExWeb.Graphql.KeyValue.KeyValueTest do
 
   describe "fetch_key_value" do
     test "fetch_key_value return a key-value pair successfully" do
-      variables = %{"key" => "testKey"}
+      # Setup the data
+      variable_set = %{"key" => "testKey", "value" => "testValue"}
+      Absinthe.run(@mutation_notation, KeyValueExWeb.Schema, variables: variable_set, context: %{})
 
+      # start get test
+      variables = %{"key" => "testKey"}
       res =
         Absinthe.run(@query_notation, KeyValueExWeb.Schema, variables: variables, context: %{})
 
