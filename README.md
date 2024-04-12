@@ -1,21 +1,62 @@
-# KeyValueEx
+# How to Run
 
-To start your Phoenix server:
+## Setup Redis Container (Optional)
+If you don't have redis instance in your machine you can use docker container.
+Run docker-compose.yaml
+```
+docker compose up -d
+```
+## How to start the application
+### Make new env.sh file. Then copy content of env.sh.example
+```
+export REDIS_HOST = "localhost"
+export REDIS_PORT = "6379"
+export REDIS_USERNAME = "myuser"
+export REDIS_PASSWORD = "mypassword"
 
-  * Run `mix setup` to install and setup dependencies
-  * Start Phoenix endpoint with `mix phx.server` or inside IEx with `iex -S mix phx.server`
+export REDIS_HOST_TEST="localhost"
+export REDIS_PORT_TEST="6380"
+export REDIS_USERNAME_TEST="myuser"
+export REDIS_PASSWORD_TEST="mypassword"
+```
+### Source the env.sh
+```
+source env.sh
+```
+### Download the dependency
+```
+mix deps.get
+```
 
-Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
+### Run the application
+```
+iex -S mix phx.server
+```
 
-Ready to run in production? Please [check our deployment guides](https://hexdocs.pm/phoenix/deployment.html).
+## How to call the GraphQL
+### Open the GraphiQL Inteface in browser
+```
+// local browser
+http://localhost:4000/graphiql
+```
 
-## Learn more
+![alt text](image.png)
+### Set The Key Value Store
+```
+mutation {
+  storeKeyValue(key: "coba", value: "test3"){
+    key
+    value
+  }
+}
+```
 
-  * Official website: https://www.phoenixframework.org/
-  * Guides: https://hexdocs.pm/phoenix/overview.html
-  * Docs: https://hexdocs.pm/phoenix
-  * Forum: https://elixirforum.com/c/phoenix-forum
-  * Source: https://github.com/phoenixframework/phoenix
-
-
-
+### Get The Key Value Store
+```
+query {
+  fetchKeyValue(key: "coba"){
+    key
+    value
+  }
+}
+```
